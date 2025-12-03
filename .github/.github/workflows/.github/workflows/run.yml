@@ -1,0 +1,36 @@
+name: Run Layla 24x7
+
+on:
+  workflow_dispatch:
+  push:
+  schedule:
+    - cron: "0 */4 * * *"   # हर 4 घंटे में auto restart safety
+
+jobs:
+  run-layla:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Install Cloudflare Tunnel
+      run: |
+        mkdir -p ~/.cloudflared
+        echo "${{ secrets.CLOUDFLARE_TUNNEL_CONFIG }}" > ~/.cloudflared/config.yml
+        echo "${{ secrets.CLOUDFLARE_TUNNEL_CREDS }}" > ~/.cloudflared/tunnel.json
+
+    - name: Start server + tunnel
+      run: |
+        uvicorn main:app --host 0.0.0.0 --port 8000 &
+        sleep 5
+        cloudflared tunnel run ${{ secrets.CLOUDFLARE_TUNNEL_ID }}
+
