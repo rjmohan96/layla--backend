@@ -25,21 +25,20 @@ jobs:
         sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
         sudo chmod +x /usr/local/bin/cloudflared
 
-    - name: Create Tunnel Credentials Automatically
+    - name: Auto-create Credentials (Cloudflare)
       run: |
-        echo "Creating credentials..."
-        cloudflared tunnel delete $CF_TUNNEL_ID || true
+        echo "Generating Tunnel Credentials..."
         cloudflared tunnel create layla-tunnel || true
       env:
         CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        CF_TUNNEL_ID: ${{ secrets.CF_TUNNEL_ID }}
 
     - name: Run Cloudflare Tunnel
       run: |
         cloudflared tunnel run $CF_TUNNEL_ID &
       env:
         CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        CF_TUNNEL_ID: ${{ secrets.CF_TUNNEL_ID }}
 
     - name: Start AI Backend
       run: python3 main.py
