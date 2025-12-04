@@ -1,39 +1,45 @@
 name: Layla Backend 24/7
-
 on:
   push:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
+    branches: [ "main" ]
 
 jobs:
   run_server:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+    - name: Install dependencies
+      run: pip install -r requirements.txt
 
-      - name: Create Cloudflare Tunnel file
-        run: echo "${{ secrets.CF_TUNNEL_JSON }}" > tunnel.json
+    - name: Install Cloudflared
+      run: |
+        sudo wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+        sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+        sudo chmod +x /usr/local/bin/cloudflared
 
-      - name: Install Cloudflared
-        run: |
-          sudo mkdir -p /etc/cloudflared
-          echo "${{ secrets.CF_TUNNEL_JSON }}" | sudo tee /etc/cloudflared/${{ secrets.CF_TUNNEL_ID }}.json >/dev/null
-          sudo wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-          sudo install cloudflared-linux-amd64 /usr/local/bin/cloudflared
+    - name: Create Tunnel Credentials Automatically
+      run: |
+        echo "Creating credentials..."
+        cloudflared tunnel delete $CF_TUNNEL_ID || true
+        cloudflared tunnel create layla-tunnel || true
+      env:
+        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        CF_TUNNEL_ID: ${{ secrets.CF_TUNNEL_ID }}
 
-      - name: Start Cloudflare Tunnel
-        run: cloudflared tunnel --config tunnel.json run ${{ secrets.CF_TUNNEL_ID }} &
+    - name: Run Cloudflare Tunnel
+      run: |
+        cloudflared tunnel run $CF_TUNNEL_ID &
+      env:
+        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
-      - name: Start AI Backend
-        run: python3 main.py
+    - name: Start AI Backend
+      run: python3 main.py
