@@ -1,0 +1,39 @@
+name: Layla Backend 24/7
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  run_server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create Cloudflare Tunnel file
+        run: echo "${{ secrets.CF_TUNNEL_JSON }}" > tunnel.json
+
+      - name: Install Cloudflared
+        run: |
+          sudo mkdir -p /etc/cloudflared
+          echo "${{ secrets.CF_TUNNEL_JSON }}" | sudo tee /etc/cloudflared/${{ secrets.CF_TUNNEL_ID }}.json >/dev/null
+          sudo wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          sudo install cloudflared-linux-amd64 /usr/local/bin/cloudflared
+
+      - name: Start Cloudflare Tunnel
+        run: cloudflared tunnel --config tunnel.json run ${{ secrets.CF_TUNNEL_ID }} &
+
+      - name: Start AI Backend
+        run: python3 main.py
