@@ -11,26 +11,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
 
-    - name: Start Cloudflare Tunnel
-      run: |
-        echo "$CF_TUNNEL_CREDENTIALS" > tunnel.json
-        nohup cloudflared tunnel --config tunnel.json run $CF_TUNNEL_ID &
+      - name: Start Cloudflare Tunnel
+        run: |
+          echo "$CF_TUNNEL_CREDENTIALS" > tunnel.json
+          nohup cloudflared tunnel --config tunnel.json run $CF_TUNNEL_ID &
 
-    - name: Run Backend
-      env:
-        MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
-      run: |
-        nohup python3 main.py &
-        sleep 999999
+      - name: Run Backend
+        env:
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+        run: |
+          nohup python3 main.py &
+          sleep 999999
