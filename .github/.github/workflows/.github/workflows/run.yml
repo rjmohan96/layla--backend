@@ -1,13 +1,13 @@
-name: Run Layla 24x7
+name: Run Layla Backend 24/7
 
 on:
-  workflow_dispatch:
   push:
+  workflow_dispatch:
   schedule:
-    - cron: "0 */4 * * *"   # हर 4 घंटे में auto restart safety
+    - cron: "0 */6 * * *"
 
 jobs:
-  run-layla:
+  run-server:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,17 +20,17 @@ jobs:
         python-version: "3.10"
 
     - name: Install dependencies
-      run: pip install -r requirements.txt
-
-    - name: Install Cloudflare Tunnel
       run: |
-        mkdir -p ~/.cloudflared
-        echo "${{ secrets.CLOUDFLARE_TUNNEL_CONFIG }}" > ~/.cloudflared/config.yml
-        echo "${{ secrets.CLOUDFLARE_TUNNEL_CREDS }}" > ~/.cloudflared/tunnel.json
+        pip install -r requirements.txt
 
-    - name: Start server + tunnel
+    - name: Start Cloudflare Tunnel
       run: |
-        uvicorn main:app --host 0.0.0.0 --port 8000 &
-        sleep 5
-        cloudflared tunnel run ${{ secrets.CLOUDFLARE_TUNNEL_ID }}
+        echo "$CF_TUNNEL_CREDENTIALS" > tunnel.json
+        nohup cloudflared tunnel --config tunnel.json run $CF_TUNNEL_ID &
 
+    - name: Run Backend
+      env:
+        MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+      run: |
+        nohup python3 main.py &
+        sleep 999999
